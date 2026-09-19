@@ -1,0 +1,79 @@
+<main class="sentinel-shell">
+  @if (!authenticated && alerts.length === 0) {
+    <section class="login-panel">
+      <div class="brand-mark">S</div>
+      <p class="eyebrow">MERIDIANTRUST / SENTINEL</p>
+      <h1>Transaction monitoring control room</h1>
+      <p class="lede">Review prioritized risk alerts, inspect evidence, and preserve every analyst decision.</p>
+      <form (ngSubmit)="login()">
+        <label>
+          Analyst username
+          <input [(ngModel)]="username" name="username" autocomplete="username" placeholder="analyst" />
+        </label>
+        <label>
+          API password
+          <input [(ngModel)]="password" name="password" type="password" autocomplete="current-password" />
+        </label>
+        <button class="primary-button" type="submit">Open alert queue</button>
+      </form>
+      @if (error) { <p class="error-message">{{ error }}</p> }
+    </section>
+  } @else {
+    <header class="topbar">
+      <div class="wordmark"><span class="brand-mark small">S</span><span>SENTINEL</span></div>
+      <div class="topbar-meta"><span class="live-dot"></span> MONITORING LIVE <button class="ghost-button" (click)="logout()">Sign out</button></div>
+    </header>
+
+    <section class="content">
+      <div class="intro-row">
+        <div>
+          <p class="eyebrow">COMPLIANCE OPERATIONS / OVERVIEW</p>
+          <h1>Alert command center</h1>
+          <p class="muted">Risk-ranked activity requiring analyst attention.</p>
+        </div>
+        <button class="refresh-button" (click)="loadAlerts()" [disabled]="loading">{{ loading ? 'Refreshing...' : 'Refresh queue' }}</button>
+      </div>
+
+      @if (error) { <div class="error-banner">{{ error }}</div> }
+
+      <section class="metric-grid">
+        <article class="metric-card"><span class="metric-label">OPEN ALERTS</span><strong>{{ openCount }}</strong><span class="metric-note">awaiting review</span></article>
+        <article class="metric-card urgent"><span class="metric-label">HIGH RISK</span><strong>{{ highRiskCount }}</strong><span class="metric-note">score 80 or above</span></article>
+        <article class="metric-card"><span class="metric-label">TOTAL SIGNALS</span><strong>{{ alerts.length }}</strong><span class="metric-note">including dispositions</span></article>
+      </section>
+
+      <section class="workspace">
+        <div class="queue-panel">
+          <div class="panel-heading"><div><p class="eyebrow">PRIORITIZED QUEUE</p><h2>Alerts</h2></div><span class="count-pill">{{ filteredAlerts.length }}</span></div>
+          <div class="filters">
+            <select [(ngModel)]="statusFilter" aria-label="Filter by status"><option value="ALL">All statuses</option><option value="OPEN">Open</option><option value="IN_REVIEW">In review</option><option value="ESCALATED">Escalated</option><option value="CLEARED">Cleared</option></select>
+            <select [(ngModel)]="ruleFilter" aria-label="Filter by rule"><option value="ALL">All rules</option>@for (rule of ruleTypes; track rule) {<option [value]="rule">{{ rule.replace('_', ' ') }}</option>}</select>
+          </div>
+          <div class="alert-list">
+            @for (alert of filteredAlerts; track trackAlert($index, alert)) {
+              <button class="alert-row" [class.selected]="selectedAlert?.id === alert.id" (click)="selectAlert(alert)">
+                <span class="score" [class.high]="alert.score >= 80">{{ alert.score }}</span>
+                <span class="alert-copy"><strong>{{ alert.ruleType.replaceAll('_', ' ') }}</strong><small>{{ alert.explanation }}</small></span>
+                <span class="status" [attr.data-status]="alert.status">{{ alert.status.replace('_', ' ') }}</span>
+              </button>
+            } @empty { <div class="empty-state">No alerts match the current filters.</div> }
+          </div>
+        </div>
+
+        <aside class="detail-panel">
+          @if (selectedAlert; as alert) {
+            <p class="eyebrow">ALERT DETAIL / #{{ alert.id }}</p>
+            <div class="detail-title"><h2>{{ alert.ruleType.replaceAll('_', ' ') }}</h2><span class="score large" [class.high]="alert.score >= 80">{{ alert.score }}</span></div>
+            <span class="status" [attr.data-status]="alert.status">{{ alert.status.replace('_', ' ') }}</span>
+            <div class="detail-block"><span class="detail-label">WHY IT WAS FLAGGED</span><p>{{ alert.explanation }}</p></div>
+            <div class="detail-block"><span class="detail-label">EVIDENCE TRANSACTIONS</span><div class="evidence-list">@for (evidence of alert.evidenceTransactionIds.split(','); track evidence) {<span>#{{ evidence }}</span>}</div></div>
+            <div class="detail-block"><span class="detail-label">ACCOUNT / CUSTOMER</span><p>Account {{ alert.accountId ?? 'Unassigned' }}<br />Customer {{ alert.customerId ?? 'Unassigned' }}</p></div>
+            @if (alert.status !== 'CLEARED') { <button class="primary-button full" (click)="clearSelectedAlert()">Clear with disposition</button> }
+          } @else {
+            <div class="detail-empty"><span class="crosshair">+</span><h2>Select an alert</h2><p>Choose a queue item to inspect the rule explanation and supporting evidence.</p></div>
+          }
+        </aside>
+      </section>
+    </section>
+  }
+</main>
